@@ -1,5 +1,5 @@
 # pihole-ha-mqtt-service
-Pihole service that exposes group management (enable/disable) to Home Assistant with autoconfiguration
+Pihole service that exposes group management (enable/disable) to Home Assistant with autoconfiguration.
 It also exposes statistics as sensors, and it updates automatically (every 5 second if not set otherwise) when a group is enabled/disabled from the PiHole front-end itself.
 
 ![Parental control](https://github.com/Andrec83/pihole-ha-mqtt-service/blob/main/Parent%20Control.PNG)
