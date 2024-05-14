@@ -55,8 +55,7 @@ To install on Raspberry PI:
     ```
 
 
-The script can certainly be improved and generalised, happy for any contribution to come along. I still have to add a way to report that a group had been enabled/disabled from the PiHole front-end. 
-I'll add - when I need it next - reporting on the general metrics (number of queries, etc) and maybe something more. 
+The script can certainly be improved and generalised, happy for any contribution to come along. I still have to add a way to report that a group had been enabled/disabled from the PiHole front-end. I also need to improve the way I read info from the env file and manage cases where MQTT user and PWD are not necessary. 
 
 Credit to https://community.home-assistant.io/t/pihole-5-enable-disable-groups-block-internet/268927 for the insipration on how to manage PiHole via bash, 
 and https://medium.com/codex/setup-a-python-script-as-a-service-through-systemctl-systemd-f0cc55a42267 for the service management aspect. 
