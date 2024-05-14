@@ -209,9 +209,9 @@ def convert_type(value_string):
       - string if value_string is a string
     """
     if value_string.replace('.', '', 1).isnumeric() and value_string.isnumeric():  # we got an int
-        converted_value = int(value)
+        converted_value = int(value_string)
     elif value_string.replace('.', '', 1).isnumeric() and not value_string.isnumeric():  # we got a float
-        converted_value = float(value)
+        converted_value = float(value_string)
     else:
         converted_value = value_string
     return converted_value
@@ -271,7 +271,7 @@ group_list = get_group_status(group_name_filter)
 """ collect system information to attach to the config messages TODO: Add error handling """
 debian_version = execute_command('cat /etc/debian_version')[0]
 interface = execute_command("route | grep default | awk '{print $NF}'")[0]
-mac_address = execute_command(f"ifconfig | grep {system['interface']} -A 7 | grep ether | awk '{{print $2}}'")[0]
+mac_address = execute_command(f"ifconfig | grep {interface} -A 7 | grep ether | awk '{{print $2}}'")[0]
 mac_address_no_columns = mac_address.replace(':', '')
 
 """ capture the stats from pihole """
