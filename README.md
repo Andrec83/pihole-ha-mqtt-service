@@ -1,5 +1,6 @@
 # pihole-ha-mqtt-service
 Pihole service that exposes group management (enable/disable) to Home Assistant with autoconfiguration
+It also exposes statistics as sensors, and it updates automatically (every 5 second if not set otherwise) when a group is enabled/disabled from the PiHole front-end itself.
 
 ![Parental control](https://github.com/Andrec83/pihole-ha-mqtt-service/blob/main/Parent%20Control.PNG)
 ![Pihole reporting](https://github.com/Andrec83/pihole-ha-mqtt-service/blob/main/PiHole%20reports.PNG)
@@ -60,7 +61,9 @@ To install on Raspberry PI:
     ```
 
 
-The script can certainly be improved and generalised, happy for any contribution to come along. I still have to add a way to report that a group had been enabled/disabled from the PiHole front-end. I also need to improve the way I read info from the env file and manage cases where MQTT user and PWD are not necessary. 
+The script can certainly be improved and generalised, happy for any contribution to come along. 
+I need to improve the way I read info from the env file and manage cases where MQTT user and PWD are not necessary. 
+I also need to find a way to update PiHole front-end when a group i enabled/disabled from HomeAssistant.
 
 Credit to https://community.home-assistant.io/t/pihole-5-enable-disable-groups-block-internet/268927 for the insipration on how to manage PiHole via bash, 
 and https://medium.com/codex/setup-a-python-script-as-a-service-through-systemctl-systemd-f0cc55a42267 for the service management aspect. 
