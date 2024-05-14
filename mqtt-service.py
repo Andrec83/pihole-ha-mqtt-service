@@ -353,7 +353,7 @@ def update_stat_pihole():
             client.publish(conf_message['topic'], payload=conf_message['payload'], qos=0, retain=False)
             send_stat_status(st)
         # else check if the stat change, and update it if so
-        elif stored_stats[st['id']] is None or json.dumps(st['value']) != stored_stats[st['id']]:
+        elif stored_stats[st['id']] is None or st['value'] != stored_stats[st['id']]:
             send_stat_status(st)
 
 
