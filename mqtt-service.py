@@ -9,8 +9,10 @@ import re
 
 
 """ configuration TODO move them to a separate files and prepare install script """
-topic_status_base = 'pihole/groups/state/'  # topic used to publish the status of the groups
-topic_set_base = 'pihole/groups/set/'  # topic used to receive commands from HomeAssistant
+topic_group_status_base = 'pihole/groups/state/'  # topic used to publish the status of the groups
+topic_group_set_base = 'pihole/groups/set/'  # topic used to receive commands from HomeAssistant
+topic_global_status_base = 'pihole/state/' # topic used to publish the status of pihole filtering
+topic_global_set_base = 'pihole/set'  # topic used to receive the enable/disable command from HA
 group_name_filter = 'block'  # keyword used to filter the PiHole group names that we want to expose
 topic_stat_base = 'pihole/stats/state/'  # topic used to publish the status of the statistics
 env_path = '/etc/environment'  # path to the environment file with login credentials and address
@@ -19,6 +21,7 @@ send_update_frequency = 5  # send an update every X seconds
 """ stores the known groups, stats and their status, for the regular updates """
 stored_groups = {}
 stored_stats = {}
+config_messages = []
 
 
 def on_connect(mqtt_client, userdata, flags, rc):
@@ -32,28 +35,73 @@ def on_connect(mqtt_client, userdata, flags, rc):
     for msg in config_messages:
         mqtt_client.publish(msg['topic'], payload=msg['payload'], qos=0, retain=False)
     send_group_status()
+    send_blocking_status()
 
     # Subscribing in on_connect() means that if we lose the connection and
     # reconnect then subscriptions will be renewed.
-    mqtt_client.subscribe([(f"{topic_set_base}", 1)])
+    mqtt_client.subscribe([(f"pihole/#", 1)])
 
 
 def on_message(mqtt_client, userdata, message):
     """
     mqtt function on message received: request update for the group,
-    received as part of the topic {topic_set_base}{group_name}
+    received as part of the topic {topic_group_set_base}{group_name}
     """
     topic = message.topic
     payload = message.payload.decode()
-    print(f"Message received: {topic}: {payload}")
-    if topic_set_base in topic:
-        group = topic.replace(topic_set_base, '')
+    # print(f"Message received: {topic}: {payload}")
+    if topic_group_set_base in topic:
+        print(f"Message received: {topic}: {payload}")
+        group = topic.replace(topic_group_set_base, '')
         if payload in ["0", "1"]:
             update = update_group_state(group, payload)
             if update == 0:
                 send_group_status(group)
         else:
             print(f"Received unexpected payload {payload} for topic {topic}")
+    elif topic_global_set_base in topic:
+        print(f"Message received: {topic}: {payload}")
+        if payload in ["0", "1"]:
+            update = update_blocking_state(payload)
+            send_blocking_status(update)
+        else:
+            print(f"Received unexpected payload {payload} for topic {topic}")
+
+
+def update_blocking_state(st):
+    """ function to update the blocking enable/disabled status on PiHole """
+    state = ['disable', 'enable'][int(st)]
+    pihole_command = f"/usr/local/bin/pihole {state}"
+    pihole_output = execute_command(pihole_command)
+    return pihole_output
+
+
+def send_blocking_status(status_string=None):
+    """
+    function to update the current status of pihole
+    return immediately the status of pihole and update the sensor if available
+    """
+    # update the switch status
+    if status_string is None:
+        pihole_command = f"/usr/local/bin/pihole status"
+        pihole_output = execute_command(pihole_command)
+    else:
+        pihole_output = status_string
+    state_topic = f"{topic_global_status_base}blocking"
+    if 'enabled' in ''.join(pihole_output).lower():
+        status_payload = 1  # pihole is enabled
+    elif 'disabled' in ''.join(pihole_output).lower():
+        status_payload = 0  # pihole is disabled
+    else:
+        print("unable to retrieve the status of PiHole with command 'pihole status'")
+        return -1
+    client.publish(state_topic, payload=status_payload, qos=0, retain=False)
+    # update the sensor status if available
+    status_sensor_payload = ['Offline', 'Active'][status_payload]
+    status_sensor_topic = f"{topic_stat_base}PiHole_Status"
+    client.publish(status_sensor_topic, payload=status_sensor_payload, qos=0, retain=False)
+    stored_stats['PiHole_Status'] = status_sensor_payload
+    return 0
 
 
 def update_group_state(grp, st):
@@ -80,7 +128,7 @@ def send_group_status(selected_group=None):
     groups_list = get_group_status(group_name_filter)
     for group in groups_list:
         if selected_group is None or selected_group == group:
-            topic = f"{topic_status_base}{group}"
+            topic = f"{topic_group_status_base}{group}"
             payload = groups_list[group]
             client.publish(topic, payload=payload, qos=0, retain=False)
             # store the current value
@@ -154,6 +202,32 @@ def clean_string(s):
     return re.sub(r'[^ -~]+', '', s).strip()
 
 
+def prepare_pihole_config_message():
+    """ 
+    create the config message dict for HomeAssistant switch autoconfiguration 
+    to enable and disable entirely the DNS filtering
+    """
+    payload = {"name": f"PiHole Global Blocking",
+               "unique_id": f"pihole_global_{mac_address_no_columns}",
+               "device": {
+                   "identifiers": f"PiHole_{mac_address_no_columns}",
+                   "connections": [["mac", mac_address]],
+                   "manufacturer": "Raspberry",
+                   "model": "Pi Zero W",
+                   "name": "Raspberry Pi Zero W",
+                   "sw_version": f"Debian {debian_version}"},
+               "icon": "mdi:lock",
+               "state_topic": f"{topic_global_status_base}blocking",
+               "command_topic": f"{topic_global_set_base}blocking",
+               "payload_on": 1,
+               "payload_off": 0,
+               "state_on": 1,
+               "state_off": 0,
+               "optimistic": False
+               }
+    return payload
+
+
 def prepare_groups_config_message(group_name_string):
     """ create the config message dict for HomeAssistant switches autoconfiguration """
     payload = {"name": f"PiHole Group {group_name_string}",
@@ -166,8 +240,8 @@ def prepare_groups_config_message(group_name_string):
                    "name": "Raspberry Pi Zero W",
                    "sw_version": f"Debian {debian_version}"},
                "icon": "mdi:lock",
-               "state_topic": f"{topic_status_base}{group_name_string}",
-               "command_topic": f"{topic_set_base}{group_name_string}",
+               "state_topic": f"{topic_group_status_base}{group_name_string}",
+               "command_topic": f"{topic_group_set_base}{group_name_string}",
                "payload_on": 1,
                "payload_off": 0,
                "state_on": 1,
@@ -265,6 +339,24 @@ def parse_stats(stat_string):
     return stats_list
 
 
+def update_stat_pihole():
+    stat_command = "pihole -c -e"
+    stat_result = execute_command(stat_command)
+    stats_list = parse_stats(' '.join(stat_result))
+    for st in stats_list:
+        # of the stats was not picket-up for any reason before, send the config message and status
+        if st['id'] not in stored_stats:
+            stat_pl = prepare_stats_config_message(st)
+            conf_message = {'topic': f'homeassistant/sensor/PiHole_stats/{st["id"]}/config',
+                            'payload': json.dumps(stat_pl)}
+            config_messages.append(conf_message)
+            client.publish(conf_message['topic'], payload=conf_message['payload'], qos=0, retain=False)
+            send_stat_status(st)
+        # else check if the stat change, and update it if so
+        elif stored_stats[st['id']] is None or json.dumps(st['value']) != stored_stats[st['id']]:
+            send_stat_status(st)
+
+
 """ collects the list of groups available on PiHole """
 group_list = get_group_status(group_name_filter)
 
@@ -280,7 +372,6 @@ result = execute_command(command)
 stats = parse_stats(' '.join(result))
 
 """ create the config messages for home assistant """
-config_messages = []
 for group_name in group_list:
     if group_name_filter in group_name.lower():
         group_payload = prepare_groups_config_message(group_name)
@@ -290,6 +381,11 @@ for stat in stats:
     stat_payload = prepare_stats_config_message(stat)
     config_messages.append({'topic': f'homeassistant/sensor/PiHole_stats/{stat["id"]}/config',
                             'payload': json.dumps(stat_payload)})
+
+""" add an entity to enable/disable the entire pihole filtering """
+pihole_payload = prepare_pihole_config_message()
+config_messages.append({'topic': f'homeassistant/switch/PiHole/blocking/config',
+                        'payload': json.dumps(pihole_payload)})
 
 """ load the connection credentials, address and port from environment file """
 user = os.environ.get('MQTT_USER')
@@ -340,19 +436,5 @@ while True:
                 send_group_status(group_name)
 
     # update stats from PiHole
-    command = "pihole -c -e"
-    result = execute_command(command)
-    stats = parse_stats(' '.join(result))
-    for stat in stats:
-        # of the stats was not picket-up for any reason before, send the config message and status
-        if stat['id'] not in stored_stats:
-            stat_payload = prepare_stats_config_message(stat)  # TODO check on the liine below, something is off
-            config_message = {'topic': f'homeassistant/sensor/PiHole_stats/{stat["id"]}/config',
-                              'payload': json.dumps(stat_payload)}
-            config_messages.append(config_message)
-            mqtt_client.publish(config_message['topic'], payload=config_message['payload'], qos=0, retain=False)
-            send_stat_status(stat)
-        # else check if the stat change, and update it if so
-        elif stored_stats[stat['id']] is None or json.dumps(stat['value']) != stored_stats[stat['id']]:
-            send_stat_status(stat)
+    update_stat_pihole()
     time.sleep(send_update_frequency)
