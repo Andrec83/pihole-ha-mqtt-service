@@ -1,6 +1,11 @@
 # pihole-ha-mqtt-service
 Pihole service that exposes group management (enable/disable) to Home Assistant with autoconfiguration
 
+![Parental control](https://github.com/Andrec83/pihole-ha-mqtt-service/blob/main/Parent%20Control.PNG)
+![Pihole reporting](https://github.com/Andrec83/pihole-ha-mqtt-service/blob/main/PiHole%20reports.PNG)
+
+
+
 To install on Raspberry PI:
 1) download the file mqtt-service.py on you Raspberry PI. I put mine on the root home directory:
    ```
