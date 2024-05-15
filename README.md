@@ -21,9 +21,13 @@ To install on Raspberry PI:
    ```
 4) amend the script mqtt-service.py, at the top of the script you should change the variables to your liking:
    ```
-   topic_status_base = 'pihole/groups/state/'
-   topic_set_base = 'pihole/groups/set/'
+   topic_group_set_base = 'pihole/groups/set/'  # topic used to receive commands from HomeAssistant
+   topic_global_status_base = 'pihole/state/' # topic used to publish the status of pihole filtering
+   topic_global_set_base = 'pihole/set'  # topic used to receive the enable/disable command from HA
    group_name_filter = 'block'  # > I named all the groups that I want to manage via Home Assistant "block-xxx" or "xxx-block-xxx", therefore filtering the group by the word "block" limit the entries in HA to only what I need to control
+   topic_stat_base = 'pihole/stats/state/'  # topic used to publish the status of the statistics
+   env_path = '/etc/environment'  # path to the environment file with login credentials and address
+   send_update_frequency = 5  # send an update every X seconds
    ```
 5) download the file requirements.txt and install the dependencies:
    ```
