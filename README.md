@@ -10,7 +10,7 @@ It also exposes statistics as sensors, and it updates automatically (every 5 sec
 To install on Raspberry PI:
 1) download the file mqtt-service.py on you Raspberry PI. I put mine on the root home directory:
    ```
-   cd /root/ && sudo wget https://github.com/Andrec83/pihole-ha-mqtt-service/blob/main/mqtt-service.py
+   cd /root/ && sudo wget https://raw.githubusercontent.com/Andrec83/pihole-ha-mqtt-service/main/mqtt-service.py
    ```
 3) add to the file /etc/environment the following variables:
    ```
