@@ -31,7 +31,7 @@ To install on Raspberry PI:
    ```
 5) download the file requirements.txt and install the dependencies:
    ```
-   wget https://github.com/Andrec83/pihole-ha-mqtt-service/blob/main/requirements.txt && sudo pip3 install -r requirements.txt
+   wget https://raw.githubusercontent.com/Andrec83/pihole-ha-mqtt-service/main/requirements.txt && sudo pip3 install -r requirements.txt
    ```
 6) test the script:
    ```
